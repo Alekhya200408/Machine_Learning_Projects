@@ -1,7 +1,11 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 import joblib
 import numpy as np
 import pandas as pd
-import sys
+
+app = Flask(__name__)
+CORS(app)
 
 # load models
 model = joblib.load("models/addiction_model.pkl")
@@ -22,50 +26,36 @@ def predict_addiction(data):
     
     data_df = pd.DataFrame([data], columns=columns)
     
-    # scale
     data_scaled = scaler.transform(data_df)
-    
-    # predict
     prediction = model.predict(data_scaled)
     
     return prediction[0]
 
+# 🔥 API route
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        data = request.json
 
-if __name__ == "__main__":
-    
-    # ✅ Node input
-    if len(sys.argv) > 1:
-        try:
-            values = list(map(float, sys.argv[1:]))
-
-            result = predict_addiction(values)
-
-            # DEBUG + OUTPUT
-            print(result, flush=True)
-
-        except Exception as e:
-            print("ERROR:", str(e), flush=True)
-
-    # ✅ Manual input
-    else:
-        print("Enter values:")
-
-        daily = float(input("Daily Usage Hours: "))
-        social = float(input("Time on Social Media: "))
-        gaming = float(input("Time on Gaming: "))
-        education = float(input("Time on Education: "))
-        sleep = float(input("Sleep Hours: "))
-        checks = float(input("Phone Checks Per Day: "))
-        screen_bed = float(input("Screen Time Before Bed: "))
-        weekend = float(input("Weekend Usage Hours: "))
-        academic = float(input("Academic Performance: "))
-
-        user_data = [
-            daily, social, gaming, education,
-            sleep, checks, screen_bed, weekend,
-            academic
+        values = [
+            float(data["daily"]),
+            float(data["social"]),
+            float(data["gaming"]),
+            float(data["education"]),
+            float(data["sleep"]),
+            float(data["checks"]),
+            float(data["screen"]),
+            float(data["weekend"]),
+            float(data["academic"])
         ]
 
-        result = predict_addiction(user_data)
+        result = predict_addiction(values)
 
-        print("Addiction Level:", result)
+        return jsonify({"result": int(result)})
+
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+# 🔥 run server
+if __name__ == "__main__":
+    app.run(debug=True)
